@@ -50,6 +50,18 @@ curl "http://localhost:3000/trmnl?sensors=sensor.temperature,sensor.humidity_per
 
 **📖 [Complete Docker deployment guide →](DEPLOYMENT.md)**
 
+### 🧪 Testing Docker Build Locally
+
+Before deploying, test the Docker build:
+
+```bash
+# Test Docker build (Linux/macOS)
+./scripts/test-docker.sh
+
+# Test Docker build (Windows)
+.\scripts\test-docker.ps1
+```
+
 ### 🦀 From Source
 
 #### Prerequisites
@@ -658,24 +670,36 @@ docker run ... -e RUST_LOG=debug ...
 - No authentication on image endpoints
 - CORS is permissive by default
 
-## 🤝 Contributing
+### 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test thoroughly (use provided test scripts)
-5. Submit a pull request
+4. **Test Docker build**: `./scripts/test-docker.sh` (or `.ps1` on Windows)
+5. Test functionality with provided test scripts
+6. Submit a pull request
 
 ### 🏷️ Creating Releases
 
 ```bash
-# Use the release script
+# Test Docker build first
+./scripts/test-docker.sh
+
+# Create release
 ./scripts/release.sh
 
 # Or manually tag
 git tag -a v1.0.0 -m "Release v1.0.0"
 git push origin v1.0.0
 ```
+
+### 🔧 Docker Build Notes
+
+The Docker build has been optimized to handle missing `Cargo.lock` files automatically. If you encounter build issues:
+
+1. **Run the test script**: `./scripts/test-docker.sh`
+2. **Check Docker version**: Ensure Docker 20.10+ and BuildKit enabled
+3. **Multi-platform builds**: Requires `docker buildx` for ARM64 support
 
 ## 📄 License
 

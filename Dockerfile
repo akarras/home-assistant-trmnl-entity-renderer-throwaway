@@ -1,5 +1,5 @@
 # Build stage
-FROM rust:1.75-slim as builder
+FROM rust:1.86-slim AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -10,17 +10,8 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copy dependency files first for better caching
-COPY Cargo.toml Cargo.lock ./
-
-# Create a dummy main.rs to build dependencies
-RUN mkdir src && echo "fn main() {}" > src/main.rs
-
-# Build dependencies (this layer will be cached)
-RUN cargo build --release
-RUN rm src/main.rs
-
-# Copy source code
+# Copy all source files
+COPY Cargo.toml ./
 COPY src ./src
 
 # Build the application
