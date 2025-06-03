@@ -1,23 +1,58 @@
-# Simple Image Server for Home Assistant
+# Home Assistant TRMNL Entity Renderer
 
-A high-performance Axum-based web server that serves images from Home Assistant entities, including camera snapshots and entity pictures.
+A high-performance Axum-based web server that renders Home Assistant entity status as images, optimized for TRMNL displays and dashboards.
 
-## Features
+🚀 **[Quick Deploy with Docker →](DEPLOYMENT.md)**
 
-- 🚀 Fast async web server built with Axum
-- 📷 Camera snapshot support via Home Assistant API
-- 🖼️ Entity picture serving from various attribute sources
-- 🔍 Auto-discovery of image URLs in entity attributes
-- 📋 Camera entity listing endpoint
-- 🌐 CORS support for web applications
-- ⚡ Built-in caching headers
-- 🛡️ Comprehensive error handling
-- 🔧 **Cross-platform `.env` support** - works on Windows, Linux, and macOS
-- 📝 **Windows-friendly scripts** - `.bat` and `.ps1` files included
+## ✨ Features
 
-## Quick Start
+### 📟 TRMNL Display Support
+- **800x480 1-bit grayscale** images optimized for e-ink displays
+- **Visual gauges** for percentage sensors (battery, humidity, CPU, etc.)
+- **Extra large text** for distance readability
+- **Smart sensor detection** and formatting
 
-### Prerequisites
+### 🖼️ Multi-Sensor Dashboards
+- **Combined status images** with multiple sensors
+- **Professional layouts** with gradients and borders
+- **Custom dimensions** and titles
+- **Color-coded status indicators**
+
+### 🏠 Home Assistant Integration
+- **Entity status rendering** with readable bitmap fonts
+- **Camera snapshot support** via Home Assistant API
+- **Auto-discovery** of image URLs in entity attributes
+- **CORS support** for web applications
+
+### 🛠️ Developer Friendly
+- **Fast async server** built with Axum
+- **Cross-platform support** - Windows, Linux, macOS
+- **Docker support** with multi-architecture builds
+- **Comprehensive error handling** and logging
+
+## 🚀 Quick Start
+
+### 🐳 Docker (Recommended)
+
+```bash
+# Pull and run the latest image
+docker run -d \
+  --name ha-trmnl-renderer \
+  -p 3000:3000 \
+  -e HA_URL=http://your-homeassistant:8123 \
+  -e HA_TOKEN=your_long_lived_access_token \
+  --restart unless-stopped \
+  ghcr.io/akarras/home-assistant-trmnl-entity-renderer-throwaway:latest
+
+# Test TRMNL endpoint
+curl "http://localhost:3000/trmnl?sensors=sensor.temperature,sensor.humidity_percent&title=TEST"
+```
+
+**📖 [Complete Docker deployment guide →](DEPLOYMENT.md)**
+
+### 🦀 From Source
+
+#### Prerequisites
 
 - Rust 1.70+ installed
 - Access to a Home Assistant instance
@@ -211,32 +246,205 @@ The server searches for images in these entity attributes (in order):
 
 ## Docker Support
 
-### Dockerfile
-```dockerfile
-FROM rust:1.75 as builder
-WORKDIR /app
-COPY . .
-RUN cargo build --release
+### 🐳 Pre-built Docker Images
 
-FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /app/target/release/simple-image-server /usr/local/bin/simple-image-server
-EXPOSE 3000
-CMD ["simple-image-server"]
+**GitHub Container Registry** (recommended):
+```bash
+# Pull latest image
+docker pull ghcr.io/akarras/home-assistant-trmnl-entity-renderer-throwaway:latest
+
+# Pull specific version
+docker pull ghcr.io/akarras/home-assistant-trmnl-entity-renderer-throwaway:v1.0.0
 ```
 
-### Docker Compose
+**Multi-architecture support**: AMD64, ARM64 (Raspberry Pi, Apple Silicon)
+
+### 🚀 Quick Start with Docker
+
+**Using docker run:**
+```bash
+docker run -d \
+  --name ha-trmnl-renderer \
+  -p 3000:3000 \
+  -e HA_URL=http://your-homeassistant:8123 \
+  -e HA_TOKEN=your_long_lived_access_token \
+  -e RUST_LOG=info \
+  --restart unless-stopped \
+  ghcr.io/akarras/home-assistant-trmnl-entity-renderer-throwaway:latest
+```
+
+**Using Docker Compose:**
 ```yaml
 version: '3.8'
 services:
-  image-server:
-    build: .
+  ha-trmnl-renderer:
+    image: ghcr.io/akarras/home-assistant-trmnl-entity-renderer-throwaway:latest
+    container_name: ha-trmnl-renderer
+    ports:
+      - "3000:3000"
+    environment:
+      - HA_URL=http://homeassistant:8123
+      - HA_TOKEN=your_long_lived_access_token_here
+      - PORT=3000
+      - RUST_LOG=info
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+```
+
+**For Home Assistant Add-on style:**
+```yaml
+version: '3.8'
+services:
+  ha-trmnl-renderer:
+    image: ghcr.io/akarras/home-assistant-trmnl-entity-renderer-throwaway:latest
+    container_name: ha-trmnl-renderer
+    network_mode: host
+    environment:
+      - HA_URL=http://localhost:8123
+      - HA_TOKEN=your_long_lived_access_token_here
+      - PORT=3000
+    restart: unless-stopped
+```
+
+### 🔧 Building from Source
+
+**Clone and build:**
+```bash
+git clone https://github.com/akarras/home-assistant-trmnl-entity-renderer-throwaway.git
+cd home-assistant-trmnl-entity-renderer-throwaway
+docker build -t ha-trmnl-renderer .
+```
+
+**Multi-platform build:**
+```bash
+docker buildx build --platform linux/amd64,linux/arm64 -t ha-trmnl-renderer .
+```
+
+### 📋 Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `HA_URL` | ✅ | - | Home Assistant URL (e.g., `http://homeassistant:8123`) |
+| `HA_TOKEN` | ✅ | - | Home Assistant Long-Lived Access Token |
+| `PORT` | ❌ | `3000` | Port to run the server on |
+| `RUST_LOG` | ❌ | `info` | Log level (`error`, `warn`, `info`, `debug`, `trace`) |
+
+### 🔍 Container Health Check
+
+The container includes a built-in health check that verifies the `/health` endpoint:
+
+```bash
+# Check container health
+docker ps
+# Look for "healthy" status
+
+# Manual health check
+docker exec ha-trmnl-renderer curl -f http://localhost:3000/health
+```
+
+### 📊 Container Monitoring
+
+**View logs:**
+```bash
+docker logs ha-trmnl-renderer
+docker logs -f ha-trmnl-renderer  # Follow logs
+```
+
+**Container stats:**
+```bash
+docker stats ha-trmnl-renderer
+```
+
+### 🔄 Updates and Versioning
+
+**Update to latest:**
+```bash
+docker pull ghcr.io/akarras/home-assistant-trmnl-entity-renderer-throwaway:latest
+docker stop ha-trmnl-renderer
+docker rm ha-trmnl-renderer
+# Run with new image (use same docker run command as above)
+```
+
+**Available tags:**
+- `latest` - Latest stable release
+- `main` - Latest development build  
+- `v1.0.0` - Specific version tags
+- `v1.0` - Minor version tags
+
+### 🏠 Home Assistant Integration
+
+**Add to Home Assistant's docker-compose.yml:**
+```yaml
+services:
+  # ... your existing HA services
+  
+  ha-trmnl-renderer:
+    image: ghcr.io/akarras/home-assistant-trmnl-entity-renderer-throwaway:latest
+    container_name: ha-trmnl-renderer
+    ports:
+      - "3000:3000"
+    environment:
+      - HA_URL=http://homeassistant:8123
+      - HA_TOKEN=${HA_TRMNL_TOKEN}  # Set in .env file
+    restart: unless-stopped
+    depends_on:
+      - homeassistant
+```
+
+**Set environment in .env file:**
+```env
+HA_TRMNL_TOKEN=your_long_lived_access_token_here
+```
+
+### 📟 TRMNL-Specific Docker Usage
+
+**TRMNL Power Dashboard:**
+```bash
+# Test your TRMNL endpoint
+curl "http://localhost:3000/trmnl?sensors=sensor.current_power_production,sensor.current_power_usage,sensor.battery_percent&title=POWER%20STATUS"
+
+# Save TRMNL image directly
+curl "http://localhost:3000/trmnl?sensors=sensor.power_production,sensor.power_usage&title=ENERGY" -o trmnl_display.png
+```
+
+**TRMNL Automation in Home Assistant:**
+```yaml
+# automations.yaml
+- alias: "Update TRMNL Display"
+  trigger:
+    - platform: time_pattern
+      minutes: "/5"  # Every 5 minutes
+  action:
+    - service: shell_command.update_trmnl
+      data:
+        sensors: "sensor.power_production,sensor.power_usage,sensor.battery_percent"
+        title: "POWER STATUS"
+
+# configuration.yaml
+shell_command:
+  update_trmnl: >
+    curl -s "http://ha-trmnl-renderer:3000/trmnl?sensors={{ sensors }}&title={{ title }}" 
+    -o /config/www/trmnl_display.png
+```
+
+**Docker with volume for TRMNL images:**
+```yaml
+version: '3.8'
+services:
+  ha-trmnl-renderer:
+    image: ghcr.io/akarras/home-assistant-trmnl-entity-renderer-throwaway:latest
     ports:
       - "3000:3000"
     environment:
       - HA_URL=http://homeassistant:8123
       - HA_TOKEN=your_token_here
-      - PORT=3000
+    volumes:
+      - ./trmnl_images:/app/images  # Save TRMNL images locally
     restart: unless-stopped
 ```
 
@@ -393,28 +601,48 @@ Use in Home Assistant notifications or dashboards:
         url: "http://your-server:3000/trmnl?sensors=sensor.power_production,sensor.power_usage,sensor.battery_percent&title=HOME STATUS"
 ```
 
-## Troubleshooting
+## 🔧 Troubleshooting
+
+### 📋 Quick Diagnostics
+
+```bash
+# Health check
+curl http://localhost:3000/health
+
+# Test TRMNL endpoint
+curl "http://localhost:3000/trmnl?sensors=sensor.temperature&title=TEST" -o test.png
+
+# Check logs (Docker)
+docker logs ha-trmnl-renderer
+```
 
 ### Common Issues
 
-1. **403 Forbidden**: Check your Home Assistant token
-2. **Connection refused**: Verify HA_URL is correct and accessible
-3. **404 Not Found**: Entity doesn't exist or has no image
-4. **Timeout errors**: Increase timeout in code or check network connectivity
+| Issue | Solution |
+|-------|----------|
+| **403 Forbidden** | Check your Home Assistant token permissions |
+| **Connection refused** | Verify `HA_URL` is correct and accessible |
+| **404 Not Found** | Entity doesn't exist or has no image |
+| **Empty gauges** | Sensor must have `%` unit of measurement |
+| **Timeout errors** | Check network connectivity to Home Assistant |
 
 ### Debug Mode
-Set environment variable for detailed logging:
 ```bash
+# Cargo
 RUST_LOG=debug cargo run
+
+# Docker
+docker run ... -e RUST_LOG=debug ...
 ```
 
-### Checking Entity States
-Visit your Home Assistant Developer Tools > States to see all entity attributes and find image URLs.
+### Entity Debugging
+1. Visit Home Assistant → Developer Tools → States
+2. Find your entity and check its `unit_of_measurement`
+3. For gauges, ensure unit is exactly `%`
 
-### Windows Users
-- Use `run.bat` for simple startup
-- Use `run.ps1` for advanced features (debug mode, custom ports)
-- Example: `.\run.ps1 -Debug -Port 8080`
+### Platform-Specific
+- **Windows**: Use `run.bat` or `run.ps1 -Debug -Port 8080`
+- **Docker**: See [deployment guide](DEPLOYMENT.md) for detailed troubleshooting
 
 ## Performance Considerations
 
@@ -430,19 +658,38 @@ Visit your Home Assistant Developer Tools > States to see all entity attributes 
 - No authentication on image endpoints
 - CORS is permissive by default
 
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test thoroughly
+4. Test thoroughly (use provided test scripts)
 5. Submit a pull request
 
-## License
+### 🏷️ Creating Releases
+
+```bash
+# Use the release script
+./scripts/release.sh
+
+# Or manually tag
+git tag -a v1.0.0 -m "Release v1.0.0"
+git push origin v1.0.0
+```
+
+## 📄 License
 
 MIT License - feel free to use and modify as needed.
 
-## Changelog
+## 📋 Changelog
+
+### v1.0.0
+- **TRMNL display support** (800x480, 1-bit grayscale)
+- **Visual gauges** for percentage sensors
+- **Multi-sensor dashboards** with professional layouts
+- **Large text optimization** for distance viewing
+- **Docker support** with GitHub Container Registry
+- **GitHub Actions** for automated builds and releases
 
 ### v0.1.0
 - Initial release

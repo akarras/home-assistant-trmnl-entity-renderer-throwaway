@@ -1,0 +1,52 @@
+# Rust build artifacts
+target/
+Cargo.lock
+
+# Development files
+.git/
+.gitignore
+README.md
+*.md
+.env
+.env.example
+
+# Test files
+test_output/
+test*.sh
+test*.bat
+test*.html
+*.png
+*.jpg
+*.jpeg
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# GitHub and CI files
+.github/
+.gitattributes
+
+# Documentation and examples
+docs/
+examples/
+assets/
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/

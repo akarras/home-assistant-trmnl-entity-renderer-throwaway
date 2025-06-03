@@ -1,0 +1,122 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            ## Changes in this Release
+
+            ### 🚀 Features
+            - TRMNL display support (800x480, 1-bit grayscale)
+            - Multi-sensor status images
+            - Individual entity status rendering
+            - Visual gauges for percentage sensors
+            - Large text optimized for distance viewing
+
+            ### 📦 Docker Images
+
+            Pull the Docker image:
+            ```bash
+            docker pull ghcr.io/akarras/home-assistant-trmnl-entity-renderer-throwaway:${{ github.ref_name }}
+            ```
+
+            ### 🔗 Endpoints
+
+            - `GET /trmnl?sensors=sensor1,sensor2` - TRMNL optimized display
+            - `GET /multi-status?sensors=sensor1,sensor2` - Multi-sensor dashboard
+            - `GET /status/{entity_id}` - Single entity status
+            - `GET /image/entity/{entity_id}` - Entity images
+
+            ### 📖 Documentation
+
+            See the [README](https://github.com/akarras/home-assistant-trmnl-entity-renderer-throwaway/blob/main/README.md) for complete setup and usage instructions.
+          draft: false
+          prerelease: false
+
+  build-binaries:
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: home-assistant-trmnl-renderer-linux-x64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            artifact_name: home-assistant-trmnl-renderer-linux-arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: home-assistant-trmnl-renderer-windows-x64.exe
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: home-assistant-trmnl-renderer-macos-x64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: home-assistant-trmnl-renderer-macos-arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Build binary
+        run: |
+          cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepare artifact (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cp target/${{ matrix.target }}/release/simple-image-server ${{ matrix.artifact_name }}
+          chmod +x ${{ matrix.artifact_name }}
+
+      - name: Prepare artifact (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          copy target\${{ matrix.target }}\release\simple-image-server.exe ${{ matrix.artifact_name }}
+
+      - name: Get Release
+        id: get_release
+        uses: bruceadams/get-release@v1.3.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: ./${{ matrix.artifact_name }}
+          asset_name: ${{ matrix.artifact_name }}
+          asset_content_type: application/octet-stream
