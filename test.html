@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Home Assistant Image Server Test</title>
+        <style>
+            body {
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #f5f5f5;
+            }
+
+            .header {
+                text-align: center;
+                margin-bottom: 30px;
+                color: #333;
+            }
+
+            .server-config {
+                background: #fff;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                margin-bottom: 30px;
+            }
+
+            .server-config input {
+                width: 100%;
+                padding: 10px;
+                margin: 5px 0;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                font-size: 16px;
+            }
+
+            .server-config button {
+                background: #007bff;
+                color: white;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 16px;
+                margin: 5px;
+            }
+
+            .server-config button:hover {
+                background: #0056b3;
+            }
+
+            .test-section {
+                background: #fff;
+                margin: 20px 0;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+
+            .test-section h2 {
+                color: #333;
+                border-bottom: 2px solid #007bff;
+                padding-bottom: 10px;
+            }
+
+            .entity-test {
+                margin: 15px 0;
+                padding: 15px;
+                border: 1px solid #eee;
+                border-radius: 4px;
+                background: #fafafa;
+            }
+
+            .entity-test label {
+                display: block;
+                margin-bottom: 5px;
+                font-weight: bold;
+            }
+
+            .entity-test input {
+                width: 60%;
+                padding: 8px;
+                margin-right: 10px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+            }
+
+            .entity-test button {
+                background: #28a745;
+                color: white;
+                padding: 8px 16px;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+
+            .entity-test button:hover {
+                background: #218838;
+            }
+
+            .image-result {
+                margin: 10px 0;
+                text-align: center;
+            }
+
+            .image-result img {
+                max-width: 100%;
+                max-height: 400px;
+                border: 2px solid #ddd;
+                border-radius: 4px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            }
+
+            .error {
+                background: #f8d7da;
+                color: #721c24;
+                padding: 10px;
+                border-radius: 4px;
+                margin: 10px 0;
+            }
+
+            .success {
+                background: #d4edda;
+                color: #155724;
+                padding: 10px;
+                border-radius: 4px;
+                margin: 10px 0;
+            }
+
+            .cameras-list {
+                background: #e9ecef;
+                padding: 15px;
+                border-radius: 4px;
+                max-height: 300px;
+                overflow-y: auto;
+            }
+
+            .camera-item {
+                background: #fff;
+                margin: 5px 0;
+                padding: 10px;
+                border-radius: 4px;
+                cursor: pointer;
+                border: 1px solid #ddd;
+            }
+
+            .camera-item:hover {
+                background: #f8f9fa;
+                border-color: #007bff;
+            }
+
+            .status-indicator {
+                display: inline-block;
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                margin-right: 8px;
+            }
+
+            .status-online {
+                background-color: #28a745;
+            }
+
+            .status-offline {
+                background-color: #dc3545;
+            }
+
+            .loading {
+                text-align: center;
+                color: #666;
+                font-style: italic;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>🖼️ Home Assistant Image Server Test</h1>
+            <p>Visual testing interface for the Home Assistant Image Server</p>
+        </div>
+
+        <div class="server-config">
+            <h2>Server Configuration</h2>
+            <label>Server URL:</label>
+            <input
+                type="text"
+                id="serverUrl"
+                value="http://localhost:3000"
+                placeholder="http://localhost:3000"
+            />
+            <button onclick="testConnection()">Test Connection</button>
+            <button onclick="loadCameras()">Load Cameras</button>
+            <div id="connectionStatus"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔍 Health Check</h2>
+            <button onclick="checkHealth()">Check Server Health</button>
+            <div id="healthResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📷 Camera Entities</h2>
+            <div id="camerasList" class="cameras-list">
+                <div class="loading">
+                    Click "Load Cameras" to fetch available cameras
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🧪 Test Entity Images</h2>
+
+            <div class="entity-test">
+                <label>Camera Entity:</label>
+                <input
+                    type="text"
+                    id="cameraEntity"
+                    placeholder="camera.front_door"
+                    value="camera.front_door"
+                />
+                <button onclick="testEntity('cameraEntity', 'cameraResult')">
+                    Test Camera
+                </button>
+                <div id="cameraResult"></div>
+            </div>
+
+            <div class="entity-test">
+                <label>Person Entity:</label>
+                <input
+                    type="text"
+                    id="personEntity"
+                    placeholder="person.admin"
+                    value="person.admin"
+                />
+                <button onclick="testEntity('personEntity', 'personResult')">
+                    Test Person
+                </button>
+                <div id="personResult"></div>
+            </div>
+
+            <div class="entity-test">
+                <label>Weather Entity:</label>
+                <input
+                    type="text"
+                    id="weatherEntity"
+                    placeholder="weather.home"
+                    value="weather.home"
+                />
+                <button onclick="testEntity('weatherEntity', 'weatherResult')">
+                    Test Weather
+                </button>
+                <div id="weatherResult"></div>
+            </div>
+
+            <div class="entity-test">
+                <label>Custom Entity:</label>
+                <input
+                    type="text"
+                    id="customEntity"
+                    placeholder="Enter any entity ID"
+                />
+                <button onclick="testEntity('customEntity', 'customResult')">
+                    Test Custom
+                </button>
+                <div id="customResult"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Test Entity Status Rendering</h2>
+
+            <div class="entity-test">
+                <label>Sensor Entity (Status Image):</label>
+                <input
+                    type="text"
+                    id="sensorEntity"
+                    placeholder="sensor.temperature"
+                    value="sensor.temperature"
+                />
+                <button
+                    onclick="testStatusImage('sensorEntity', 'sensorStatusResult')"
+                >
+                    Test Status Image
+                </button>
+                <div id="sensorStatusResult"></div>
+            </div>
+
+            <div class="entity-test">
+                <label>Switch Entity (Status Image):</label>
+                <input
+                    type="text"
+                    id="switchEntity"
+                    placeholder="switch.living_room_lights"
+                    value="switch.living_room_lights"
+                />
+                <button
+                    onclick="testStatusImage('switchEntity', 'switchStatusResult')"
+                >
+                    Test Status Image
+                </button>
+                <div id="switchStatusResult"></div>
+            </div>
+
+            <div class="entity-test">
+                <label>Binary Sensor Entity (Status Image):</label>
+                <input
+                    type="text"
+                    id="binarySensorEntity"
+                    placeholder="binary_sensor.front_door"
+                    value="binary_sensor.front_door"
+                />
+                <button
+                    onclick="testStatusImage('binarySensorEntity', 'binarySensorStatusResult')"
+                >
+                    Test Status Image
+                </button>
+                <div id="binarySensorStatusResult"></div>
+            </div>
+
+            <div class="entity-test">
+                <label>Custom Status Entity:</label>
+                <input
+                    type="text"
+                    id="customStatusEntity"
+                    placeholder="Enter any entity ID"
+                />
+                <label>Width:</label>
+                <input
+                    type="number"
+                    id="statusWidth"
+                    placeholder="400"
+                    value="400"
+                    style="width: 20%; margin-right: 10px"
+                />
+                <label>Height:</label>
+                <input
+                    type="number"
+                    id="statusHeight"
+                    placeholder="200"
+                    value="200"
+                    style="width: 20%; margin-right: 10px"
+                />
+                <button onclick="testCustomStatusImage()">
+                    Test Custom Status
+                </button>
+                <div id="customStatusResult"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📈 Test Multi-Sensor Status</h2>
+
+            <div class="entity-test">
+                <label>Power Sensors Example:</label>
+                <input
+                    type="text"
+                    id="powerSensors"
+                    placeholder="sensor.current_power_production,sensor.current_power_usage"
+                    value="sensor.current_power_production,sensor.current_power_usage"
+                    style="width: 80%"
+                />
+                <button
+                    onclick="testMultiSensorImage('powerSensors', 'powerSensorsResult', 'Power Status')"
+                >
+                    Test Power Sensors
+                </button>
+                <div id="powerSensorsResult"></div>
+            </div>
+
+            <div class="entity-test">
+                <label>Temperature Sensors Example:</label>
+                <input
+                    type="text"
+                    id="tempSensors"
+                    placeholder="sensor.living_room_temperature,sensor.bedroom_temperature,sensor.outdoor_temperature"
+                    value="sensor.living_room_temperature,sensor.bedroom_temperature,sensor.outdoor_temperature"
+                    style="width: 80%"
+                />
+                <button
+                    onclick="testMultiSensorImage('tempSensors', 'tempSensorsResult', 'Temperature Status')"
+                >
+                    Test Temperature Sensors
+                </button>
+                <div id="tempSensorsResult"></div>
+            </div>
+
+            <div class="entity-test">
+                <label>Custom Multi-Sensor:</label>
+                <input
+                    type="text"
+                    id="customMultiSensors"
+                    placeholder="sensor1,sensor2,sensor3"
+                    style="width: 50%; margin-right: 10px"
+                />
+                <input
+                    type="text"
+                    id="multiSensorTitle"
+                    placeholder="Dashboard Title"
+                    value="Sensor Dashboard"
+                    style="width: 25%; margin-right: 10px"
+                />
+                <button onclick="testCustomMultiSensorImage()">
+                    Test Custom Multi-Sensor
+                </button>
+                <div id="customMultiSensorsResult"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📟 Test TRMNL Display (800x480 1-bit)</h2>
+
+            <div class="entity-test">
+                <label>TRMNL Power Dashboard:</label>
+                <input
+                    type="text"
+                    id="trmnlPowerSensors"
+                    placeholder="sensor.current_power_production,sensor.current_power_usage,sensor.battery_percent"
+                    value="sensor.current_power_production,sensor.current_power_usage,sensor.battery_percent"
+                    style="width: 80%"
+                />
+                <button
+                    onclick="testTrmnlImage('trmnlPowerSensors', 'trmnlPowerResult', 'POWER STATUS')"
+                >
+                    Test TRMNL Power
+                </button>
+                <div id="trmnlPowerResult"></div>
+            </div>
+
+            <div class="entity-test">
+                <label>TRMNL Environmental Sensors (with Gauges):</label>
+                <input
+                    type="text"
+                    id="trmnlEnvSensors"
+                    placeholder="sensor.temperature,sensor.humidity_percent,sensor.battery_percent"
+                    value="sensor.temperature,sensor.humidity_percent,sensor.battery_percent"
+                    style="width: 80%"
+                />
+                <button
+                    onclick="testTrmnlImage('trmnlEnvSensors', 'trmnlEnvResult', 'ENVIRONMENT')"
+                >
+                    Test TRMNL Environment
+                </button>
+                <div id="trmnlEnvResult"></div>
+            </div>
+
+            <div class="entity-test">
+                <label>Custom TRMNL Display:</label>
+                <input
+                    type="text"
+                    id="customTrmnlSensors"
+                    placeholder="sensor.battery_percent,sensor.cpu_percent,sensor.memory_percent"
+                    style="width: 60%; margin-right: 10px"
+                />
+                <input
+                    type="text"
+                    id="trmnlTitle"
+                    placeholder="TRMNL TITLE"
+                    value="SYSTEM STATUS"
+                    style="width: 25%; margin-right: 10px"
+                />
+                <button onclick="testCustomTrmnlImage()">
+                    Test Custom TRMNL
+                </button>
+                <div id="customTrmnlResult"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔗 Test URL-based Images</h2>
+            <div class="entity-test">
+                <label>Image URL Path:</label>
+                <input
+                    type="text"
+                    id="imageUrl"
+                    placeholder="/local/images/floor_plan.png"
+                    value="/local/images/test.jpg"
+                />
+                <button onclick="testUrl()">Test URL</button>
+                <div id="urlResult"></div>
+            </div>
+        </div>
+
+        <script>
+            function getServerUrl() {
+                return document.getElementById("serverUrl").value.trim();
+            }
+
+            function showError(elementId, message) {
+                document.getElementById(elementId).innerHTML =
+                    `<div class="error">❌ Error: ${message}</div>`;
+            }
+
+            function showSuccess(elementId, message) {
+                document.getElementById(elementId).innerHTML =
+                    `<div class="success">✅ ${message}</div>`;
+            }
+
+            function showLoading(elementId) {
+                document.getElementById(elementId).innerHTML =
+                    `<div class="loading">🔄 Loading...</div>`;
+            }
+
+            async function testConnection() {
+                const serverUrl = getServerUrl();
+                showLoading("connectionStatus");
+
+                try {
+                    const response = await fetch(`${serverUrl}/health`);
+                    if (response.ok) {
+                        showSuccess(
+                            "connectionStatus",
+                            "Connection successful!",
+                        );
+                    } else {
+                        showError(
+                            "connectionStatus",
+                            `HTTP ${response.status}: ${response.statusText}`,
+                        );
+                    }
+                } catch (error) {
+                    showError(
+                        "connectionStatus",
+                        `Connection failed: ${error.message}`,
+                    );
+                }
+            }
+
+            async function checkHealth() {
+                const serverUrl = getServerUrl();
+                showLoading("healthResult");
+
+                try {
+                    const response = await fetch(`${serverUrl}/health`);
+                    const text = await response.text();
+
+                    if (response.ok) {
+                        showSuccess(
+                            "healthResult",
+                            `Server is healthy: ${text}`,
+                        );
+                    } else {
+                        showError(
+                            "healthResult",
+                            `Health check failed: HTTP ${response.status}`,
+                        );
+                    }
+                } catch (error) {
+                    showError("healthResult", error.message);
+                }
+            }
+
+            async function loadCameras() {
+                const serverUrl = getServerUrl();
+                const camerasList = document.getElementById("camerasList");
+
+                showLoading("camerasList");
+
+                try {
+                    const response = await fetch(`${serverUrl}/cameras`);
+
+                    if (response.ok) {
+                        const cameras = await response.json();
+
+                        if (cameras.length === 0) {
+                            camerasList.innerHTML = `<div class="loading">No camera entities found</div>`;
+                            return;
+                        }
+
+                        camerasList.innerHTML = cameras
+                            .map(
+                                (camera) => `
+                        <div class="camera-item" onclick="loadCameraImage('${camera.entity_id}')">
+                            <span class="status-indicator ${camera.state === "idle" ? "status-online" : "status-offline"}"></span>
+                            <strong>${camera.entity_id}</strong><br>
+                            <small>State: ${camera.state} | Friendly Name: ${camera.attributes.friendly_name || "N/A"}</small>
+                        </div>
+                    `,
+                            )
+                            .join("");
+                    } else {
+                        showError(
+                            "camerasList",
+                            `Failed to load cameras: HTTP ${response.status}`,
+                        );
+                    }
+                } catch (error) {
+                    showError("camerasList", error.message);
+                }
+            }
+
+            function loadCameraImage(entityId) {
+                document.getElementById("cameraEntity").value = entityId;
+                testEntity("cameraEntity", "cameraResult");
+            }
+
+            async function testEntity(inputId, resultId) {
+                const entityId = document.getElementById(inputId).value.trim();
+                const serverUrl = getServerUrl();
+
+                if (!entityId) {
+                    showError(resultId, "Please enter an entity ID");
+                    return;
+                }
+
+                showLoading(resultId);
+
+                try {
+                    const imageUrl = `${serverUrl}/image/entity/${entityId}`;
+                    const response = await fetch(imageUrl);
+
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const imageUrl = URL.createObjectURL(blob);
+                        const contentType =
+                            response.headers.get("content-type") || "unknown";
+
+                        document.getElementById(resultId).innerHTML = `
+                        <div class="success">✅ Image loaded successfully</div>
+                        <div><small>Content-Type: ${contentType} | Size: ${blob.size} bytes</small></div>
+                        <div class="image-result">
+                            <img src="${imageUrl}" alt="${entityId}"
+                                 onerror="this.parentElement.innerHTML='<div class=error>Failed to display image</div>'">
+                        </div>
+                    `;
+                    } else {
+                        const errorText = await response.text();
+                        showError(
+                            resultId,
+                            `HTTP ${response.status}: ${errorText}`,
+                        );
+                    }
+                } catch (error) {
+                    showError(resultId, error.message);
+                }
+            }
+
+            async function testStatusImage(inputId, resultId) {
+                const entityId = document.getElementById(inputId).value.trim();
+                const serverUrl = getServerUrl();
+
+                if (!entityId) {
+                    showError(resultId, "Please enter an entity ID");
+                    return;
+                }
+
+                showLoading(resultId);
+
+                try {
+                    const imageUrl = `${serverUrl}/status/${entityId}`;
+                    const response = await fetch(imageUrl);
+
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const imageUrl = URL.createObjectURL(blob);
+                        const contentType =
+                            response.headers.get("content-type") || "unknown";
+
+                        document.getElementById(resultId).innerHTML = `
+                        <div class="success">✅ Status image generated successfully</div>
+                        <div><small>Content-Type: ${contentType} | Size: ${blob.size} bytes</small></div>
+                        <div class="image-result">
+                            <img src="${imageUrl}" alt="Status: ${entityId}"
+                                 onerror="this.parentElement.innerHTML='<div class=error>Failed to display status image</div>'">
+                        </div>
+                    `;
+                    } else {
+                        const errorText = await response.text();
+                        showError(
+                            resultId,
+                            `HTTP ${response.status}: ${errorText}`,
+                        );
+                    }
+                } catch (error) {
+                    showError(resultId, error.message);
+                }
+            }
+
+            async function testCustomStatusImage() {
+                const entityId = document
+                    .getElementById("customStatusEntity")
+                    .value.trim();
+                const width =
+                    document.getElementById("statusWidth").value || "400";
+                const height =
+                    document.getElementById("statusHeight").value || "200";
+                const serverUrl = getServerUrl();
+
+                if (!entityId) {
+                    showError(
+                        "customStatusResult",
+                        "Please enter an entity ID",
+                    );
+                    return;
+                }
+
+                showLoading("customStatusResult");
+
+                try {
+                    const imageUrl = `${serverUrl}/status/${entityId}?width=${width}&height=${height}`;
+                    const response = await fetch(imageUrl);
+
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const imageUrl = URL.createObjectURL(blob);
+                        const contentType =
+                            response.headers.get("content-type") || "unknown";
+
+                        document.getElementById(
+                            "customStatusResult",
+                        ).innerHTML = `
+                        <div class="success">✅ Custom status image generated successfully (${width}x${height})</div>
+                        <div><small>Content-Type: ${contentType} | Size: ${blob.size} bytes</small></div>
+                        <div class="image-result">
+                            <img src="${imageUrl}" alt="Status: ${entityId}"
+                                 onerror="this.parentElement.innerHTML='<div class=error>Failed to display status image</div>'">
+                        </div>
+                    `;
+                    } else {
+                        const errorText = await response.text();
+                        showError(
+                            "customStatusResult",
+                            `HTTP ${response.status}: ${errorText}`,
+                        );
+                    }
+                } catch (error) {
+                    showError("customStatusResult", error.message);
+                }
+            }
+
+            async function testMultiSensorImage(inputId, resultId, title) {
+                const sensors = document.getElementById(inputId).value.trim();
+                const serverUrl = getServerUrl();
+
+                if (!sensors) {
+                    showError(resultId, "Please enter sensor entity IDs");
+                    return;
+                }
+
+                showLoading(resultId);
+
+                try {
+                    const encodedSensors = encodeURIComponent(sensors);
+                    const encodedTitle = encodeURIComponent(
+                        title || "Sensor Dashboard",
+                    );
+                    const imageUrl = `${serverUrl}/multi-status?sensors=${encodedSensors}&title=${encodedTitle}`;
+                    const response = await fetch(imageUrl);
+
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const imageUrl = URL.createObjectURL(blob);
+                        const contentType =
+                            response.headers.get("content-type") || "unknown";
+
+                        document.getElementById(resultId).innerHTML = `
+                        <div class="success">✅ Multi-sensor image generated successfully</div>
+                        <div><small>Content-Type: ${contentType} | Size: ${blob.size} bytes | Sensors: ${sensors.split(",").length}</small></div>
+                        <div class="image-result">
+                            <img src="${imageUrl}" alt="Multi-sensor: ${title}"
+                                 onerror="this.parentElement.innerHTML='<div class=error>Failed to display multi-sensor image</div>'">
+                        </div>
+                    `;
+                    } else {
+                        const errorText = await response.text();
+                        showError(
+                            resultId,
+                            `HTTP ${response.status}: ${errorText}`,
+                        );
+                    }
+                } catch (error) {
+                    showError(resultId, error.message);
+                }
+            }
+
+            async function testCustomMultiSensorImage() {
+                const sensors = document
+                    .getElementById("customMultiSensors")
+                    .value.trim();
+                const title =
+                    document.getElementById("multiSensorTitle").value.trim() ||
+                    "Sensor Dashboard";
+                const serverUrl = getServerUrl();
+
+                if (!sensors) {
+                    showError(
+                        "customMultiSensorsResult",
+                        "Please enter sensor entity IDs (comma-separated)",
+                    );
+                    return;
+                }
+
+                showLoading("customMultiSensorsResult");
+
+                try {
+                    const encodedSensors = encodeURIComponent(sensors);
+                    const encodedTitle = encodeURIComponent(title);
+                    const imageUrl = `${serverUrl}/multi-status?sensors=${encodedSensors}&title=${encodedTitle}&width=600&height=400`;
+                    const response = await fetch(imageUrl);
+
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const imageUrl = URL.createObjectURL(blob);
+                        const contentType =
+                            response.headers.get("content-type") || "unknown";
+
+                        document.getElementById(
+                            "customMultiSensorsResult",
+                        ).innerHTML = `
+                        <div class="success">✅ Custom multi-sensor image generated successfully</div>
+                        <div><small>Content-Type: ${contentType} | Size: ${blob.size} bytes | Sensors: ${sensors.split(",").length} | Title: "${title}"</small></div>
+                        <div class="image-result">
+                            <img src="${imageUrl}" alt="Multi-sensor: ${title}"
+                                 onerror="this.parentElement.innerHTML='<div class=error>Failed to display multi-sensor image</div>'">
+                        </div>
+                    `;
+                    } else {
+                        const errorText = await response.text();
+                        showError(
+                            "customMultiSensorsResult",
+                            `HTTP ${response.status}: ${errorText}`,
+                        );
+                    }
+                } catch (error) {
+                    showError("customMultiSensorsResult", error.message);
+                }
+            }
+
+            async function testTrmnlImage(inputId, resultId, title) {
+                const sensors = document.getElementById(inputId).value.trim();
+                const serverUrl = getServerUrl();
+
+                if (!sensors) {
+                    showError(resultId, "Please enter sensor entity IDs");
+                    return;
+                }
+
+                showLoading(resultId);
+
+                try {
+                    const encodedSensors = encodeURIComponent(sensors);
+                    const encodedTitle = encodeURIComponent(
+                        title || "DASHBOARD",
+                    );
+                    const imageUrl = `${serverUrl}/trmnl?sensors=${encodedSensors}&title=${encodedTitle}`;
+                    const response = await fetch(imageUrl);
+
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const imageUrl = URL.createObjectURL(blob);
+                        const contentType =
+                            response.headers.get("content-type") || "unknown";
+
+                        document.getElementById(resultId).innerHTML = `
+                        <div class="success">✅ TRMNL image generated successfully (800x480 1-bit)</div>
+                        <div><small>Content-Type: ${contentType} | Size: ${blob.size} bytes | Sensors: ${sensors.split(",").length} | Format: 1-bit PNG</small></div>
+                        <div class="image-result">
+                            <img src="${imageUrl}" alt="TRMNL: ${title}" style="max-width: 100%; border: 2px solid #333;"
+                                 onerror="this.parentElement.innerHTML='<div class=error>Failed to display TRMNL image</div>'">
+                        </div>
+                    `;
+                    } else {
+                        const errorText = await response.text();
+                        showError(
+                            resultId,
+                            `HTTP ${response.status}: ${errorText}`,
+                        );
+                    }
+                } catch (error) {
+                    showError(resultId, error.message);
+                }
+            }
+
+            async function testCustomTrmnlImage() {
+                const sensors = document
+                    .getElementById("customTrmnlSensors")
+                    .value.trim();
+                const title =
+                    document.getElementById("trmnlTitle").value.trim() ||
+                    "DASHBOARD";
+                const serverUrl = getServerUrl();
+
+                if (!sensors) {
+                    showError(
+                        "customTrmnlResult",
+                        "Please enter sensor entity IDs (comma-separated)",
+                    );
+                    return;
+                }
+
+                showLoading("customTrmnlResult");
+
+                try {
+                    const encodedSensors = encodeURIComponent(sensors);
+                    const encodedTitle = encodeURIComponent(title);
+                    const imageUrl = `${serverUrl}/trmnl?sensors=${encodedSensors}&title=${encodedTitle}`;
+                    const response = await fetch(imageUrl);
+
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const imageUrl = URL.createObjectURL(blob);
+                        const contentType =
+                            response.headers.get("content-type") || "unknown";
+
+                        document.getElementById("customTrmnlResult").innerHTML =
+                            `
+                        <div class="success">✅ Custom TRMNL image generated successfully (800x480 1-bit)</div>
+                        <div><small>Content-Type: ${contentType} | Size: ${blob.size} bytes | Sensors: ${sensors.split(",").length} | Title: "${title}" | Format: 1-bit PNG</small></div>
+                        <div class="image-result">
+                            <img src="${imageUrl}" alt="TRMNL: ${title}" style="max-width: 100%; border: 2px solid #333;"
+                                 onerror="this.parentElement.innerHTML='<div class=error>Failed to display TRMNL image</div>'">
+                        </div>
+                    `;
+                    } else {
+                        const errorText = await response.text();
+                        showError(
+                            "customTrmnlResult",
+                            `HTTP ${response.status}: ${errorText}`,
+                        );
+                    }
+                } catch (error) {
+                    showError("customTrmnlResult", error.message);
+                }
+            }
+
+            async function testUrl() {
+                const imageUrl = document
+                    .getElementById("imageUrl")
+                    .value.trim();
+                const serverUrl = getServerUrl();
+
+                if (!imageUrl) {
+                    showError("urlResult", "Please enter an image URL");
+                    return;
+                }
+
+                showLoading("urlResult");
+
+                try {
+                    const fullUrl = `${serverUrl}/image/url?url=${encodeURIComponent(imageUrl)}`;
+                    const response = await fetch(fullUrl);
+
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const objectUrl = URL.createObjectURL(blob);
+                        const contentType =
+                            response.headers.get("content-type") || "unknown";
+
+                        document.getElementById("urlResult").innerHTML = `
+                        <div class="success">✅ Image loaded successfully</div>
+                        <div><small>Content-Type: ${contentType} | Size: ${blob.size} bytes</small></div>
+                        <div class="image-result">
+                            <img src="${objectUrl}" alt="URL Image"
+                                 onerror="this.parentElement.innerHTML='<div class=error>Failed to display image</div>'">
+                        </div>
+                    `;
+                    } else {
+                        const errorText = await response.text();
+                        showError(
+                            "urlResult",
+                            `HTTP ${response.status}: ${errorText}`,
+                        );
+                    }
+                } catch (error) {
+                    showError("urlResult", error.message);
+                }
+            }
+
+            // Auto-test connection on load
+            window.addEventListener("load", function () {
+                setTimeout(testConnection, 500);
+            });
+        </script>
+    </body>
+</html>

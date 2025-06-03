@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  simple-image-server:
+    build: .
+    container_name: simple-image-server
+    ports:
+      - "3000:3000"
+    environment:
+      - HA_URL=http://homeassistant:8123
+      - HA_TOKEN=${HA_TOKEN}
+      - PORT=3000
+      - RUST_LOG=info
+    restart: unless-stopped
+    networks:
+      - homeassistant
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      homeassistant:
+        condition: service_healthy
+        required: false
+
+  # Optional: Include Home Assistant for complete setup
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    privileged: true
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - ./homeassistant:/config
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "8123:8123"
+    networks:
+      - homeassistant
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8123"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+networks:
+  homeassistant:
+    driver: bridge
+
+volumes:
+  homeassistant-config:
+    driver: local
